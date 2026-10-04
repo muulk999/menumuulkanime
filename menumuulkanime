@@ -1,0 +1,582 @@
+-- Carrega a Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
+
+-- Configurações da Janela Principal
+local Window = Rayfield:CreateWindow({
+   Name = "Delta Gojo Techniques Hub",
+   LoadingTitle = "Carregando Hub Completo...",
+   LoadingSubtitle = "por IA",
+   ConfigurationSaving = { Enabled = false, FolderName = nil, FileName = "GojoConfig" },
+   KeySystem = false,
+   KeySettings = { Title = "Key", Subnote = "Key", Key = {"1234"} }
+})
+
+local config = {
+    Enabled = true,
+    Count = 6,
+    Distance = 5,
+    Speed = 2,
+    Height = 2,
+    AnimationMode = "Circle", 
+    VisualMode = "RGB",
+    FlingEnabled = false,
+    
+    -- Configurações da Asa Épica Gigante
+    WingEnabled = false,
+    WingHeight = 0.8,
+    WingDepth = -1.5,
+    WingSpeed = 2.2,
+    WingVisual = "Fogo",
+    
+    -- Configurações da Aura de Objetos do Mapa
+    CustomAuraEnabled = false,
+    SelectedTargetName = "Nenhum selecionado",
+    SelectedTargetPart = nil,
+    CustomCount = 8,
+    CustomDistance = 6,
+    CustomSpeed = 2,
+    CustomHeight = 2,
+    PickingObject = false,
+
+    -- Configurações das Esferas do Gojo
+    GojoEnabled = false,
+    OrbitSpeed = 1,
+    OrbitDistance = 14,
+    MaxHeight = 120,
+    SphereSize = 6
+}
+
+-- ==================== ABA 1: AURA DE CUBOS ====================
+local TabCubes = Window:CreateTab("Aura de Cubos", 4483362458)
+
+TabCubes:CreateToggle({
+   Name = "Ativar Aura",
+   CurrentValue = true,
+   Callback = function(Value)
+      config.Enabled = Value
+      if not Value then
+         for _, c in ipairs(workspace:GetChildren()) do if c.Name == "AuraCubesFolder" then c:ClearAllChildren() end end
+      end
+   end,
+})
+
+TabCubes:CreateSlider({ Name = "Quantidade de Cubos", Range = {1, 30}, Increment = 1, CurrentValue = 6, Callback = function(V) config.Count = V end })
+TabCubes:CreateSlider({ Name = "Distância", Range = {1, 25}, Increment = 0.5, CurrentValue = 5, Callback = function(V) config.Distance = V end })
+TabCubes:CreateSlider({ Name = "Velocidade", Range = {0.1, 10}, Increment = 0.1, CurrentValue = 2, Callback = function(V) config.Speed = V end })
+TabCubes:CreateSlider({ Name = "Altura", Range = {-5, 10}, Increment = 0.5, CurrentValue = 2, Callback = function(V) config.Height = V end })
+
+TabCubes:CreateSection("--- SISTEMA DE KICK FLING NOS CUBOS ---")
+
+TabCubes:CreateToggle({
+   Name = "Ativar Kick Fling nos Cubos",
+   CurrentValue = false,
+   Callback = function(Value)
+      config.FlingEnabled = Value
+   end,
+})
+
+TabCubes:CreateSection("--- TIPOS DE MOVIMENTO DA AURA ---")
+TabCubes:CreateButton({ Name = "Movimento: Círculo", Callback = function() config.AnimationMode = "Circle" end })
+TabCubes:CreateButton({ Name = "Movimento: Invertido", Callback = function() config.AnimationMode = "Inverted" end })
+TabCubes:CreateButton({ Name = "Movimento: Aleatório", Callback = function() config.AnimationMode = "Random" end })
+
+TabCubes:CreateSection("--- ESTILOS VISUAIS DA AURA ---")
+TabCubes:CreateButton({ Name = "Estilo RGB", Callback = function() config.VisualMode = "RGB" end })
+TabCubes:CreateButton({ Name = "Estilo Fogo 🔥", Callback = function() config.VisualMode = "Fogo" end })
+TabCubes:CreateButton({ Name = "Estilo Gelo ❄️", Callback = function() config.VisualMode = "Gelo" end })
+TabCubes:CreateButton({ Name = "Resetar Normal", Callback = function() config.VisualMode = "Normal" end })
+
+
+-- ==================== ABA 2: AURA PERSONALIZADA (MAPA) ====================
+local TabCustomAura = Window:CreateTab("Aura do Mapa 🌍", 4483362458)
+
+TabCustomAura:CreateSection("--- CLIQUE IDENTIFICADOR DE OBJETOS ---")
+
+local labelSelectedObj = TabCustomAura:CreateLabel("Objeto Selecionado: Nenhum")
+
+TabCustomAura:CreateToggle({
+   Name = "Ativar Modo de Seleção por Clique",
+   CurrentValue = false,
+   Callback = function(Value)
+      config.PickingObject = Value
+      if Value then
+         Rayfield:Notify({ Title = "Modo Identificador Ativado", Content = "Clique em qualquer objeto no mapa para selecioná-lo!", Duration = 3 })
+      end
+   end,
+})
+
+TabCustomAura:CreateSection("--- CONTROLES DA AURA DE OBJETOS ---")
+
+TabCustomAura:CreateToggle({
+   Name = "Ativar Aura com Objeto Escolhido",
+   CurrentValue = false,
+   Callback = function(Value)
+      config.CustomAuraEnabled = Value
+      if not Value then
+         if workspace:FindFirstChild("CustomMapAuraFolder") then
+            workspace.CustomMapAuraFolder:Destroy()
+         end
+      end
+   end,
+})
+
+TabCustomAura:CreateSlider({ Name = "Quantidade do Objeto", Range = {1, 20}, Increment = 1, CurrentValue = 8, Callback = function(V) config.CustomCount = V end })
+TabCustomAura:CreateSlider({ Name = "Distância ao Redor", Range = {2, 30}, Increment = 1, CurrentValue = 6, Callback = function(V) config.CustomDistance = V end })
+TabCustomAura:CreateSlider({ Name = "Velocidade de Órbita", Range = {0.1, 10}, Increment = 0.1, CurrentValue = 2, Callback = function(V) config.CustomSpeed = V end })
+TabCustomAura:CreateSlider({ Name = "Altura", Range = {-5, 15}, Increment = 0.5, CurrentValue = 2, Callback = function(V) config.CustomHeight = V end })
+
+
+-- ==================== ABA 3: ACESSÓRIOS (ASAS ÉPICAS) ====================
+local TabAccessories = Window:CreateTab("Acessórios 🪽", 4483362458)
+
+TabAccessories:CreateSection("--- CONFIGURAÇÃO DAS ASAS GIGANTES ---")
+
+TabAccessories:CreateToggle({
+   Name = "Ativar Asas Épicas",
+   CurrentValue = false,
+   Callback = function(Value)
+      config.WingEnabled = Value
+      if not Value then
+         if workspace:FindFirstChild("EpicWingsFolder") then
+            workspace.EpicWingsFolder:Destroy()
+         end
+      end
+   end,
+})
+
+TabAccessories:CreateSlider({ Name = "Altura nas Costas", Range = {-2, 4}, Increment = 0.1, CurrentValue = 0.8, Callback = function(V) config.WingHeight = V end })
+TabAccessories:CreateSlider({ Name = "Distância das Costas", Range = {-3, 0}, Increment = 0.1, CurrentValue = -1.5, Callback = function(V) config.WingDepth = V end })
+TabAccessories:CreateSlider({ Name = "Velocidade de Batida", Range = {0.5, 5}, Increment = 0.1, CurrentValue = 2.2, Callback = function(V) config.WingSpeed = V end })
+
+TabAccessories:CreateSection("--- TEXTURAS DAS ASAS ---")
+TabAccessories:CreateButton({ Name = "Textura: Fogo Vermelho 🔥", Callback = function() config.WingVisual = "Fogo" end })
+TabAccessories:CreateButton({ Name = "Textura: RGB", Callback = function() config.WingVisual = "RGB" end })
+TabAccessories:CreateButton({ Name = "Textura: Gelo ❄️", Callback = function() config.WingVisual = "Gelo" end })
+TabAccessories:CreateButton({ Name = "Textura: Sombrio / Normal", Callback = function() config.WingVisual = "Normal" end })
+
+
+-- ==================== ABA 4: TÉCNICAS DO GOJO ====================
+local TabGojo = Window:CreateTab("Técnicas Gojo 🟣🔵🔴", 4483362458)
+
+TabGojo:CreateToggle({
+   Name = "Ativar Vazio Roxo Épico",
+   CurrentValue = false,
+   Callback = function(Value)
+      config.GojoEnabled = Value
+      if not Value then
+         if workspace:FindFirstChild("GojoTechniqueFolder") then
+            workspace.GojoTechniqueFolder:Destroy()
+         end
+      end
+   end,
+})
+
+TabGojo:CreateSlider({ Name = "Tamanho das Esferas", Range = {2, 25}, Increment = 1, CurrentValue = 6, Callback = function(V) config.SphereSize = V end })
+TabGojo:CreateSlider({ Name = "Velocidade da Animação", Range = {0.3, 3}, Increment = 0.1, CurrentValue = 1, Callback = function(V) config.OrbitSpeed = V end })
+TabGojo:CreateSlider({ Name = "Distância da Órbita", Range = {6, 30}, Increment = 1, CurrentValue = 14, Callback = function(V) config.OrbitDistance = V end })
+TabGojo:CreateSlider({ Name = "Altura Extrema (Subida)", Range = {50, 300}, Increment = 10, CurrentValue = 120, Callback = function(V) config.MaxHeight = V end })
+
+
+-- ==================== DETETOR DE CLIQUE EM OBJETOS ====================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+   if config.PickingObject and input.UserInputType == Enum.UserInputType.MouseButton1 then
+      local mouse = player:GetMouse()
+      local target = mouse.Target
+      if target and target:IsA("BasePart") then
+         config.SelectedTargetPart = target
+         config.SelectedTargetName = target.Name .. " (" .. target.Parent.Name .. ")"
+         labelSelectedObj:Set("Objeto Selecionado: " .. config.SelectedTargetName)
+         config.PickingObject = false
+         Rayfield:Notify({ Title = "Objeto Identificado!", Content = "Selecionado: " .. config.SelectedTargetName, Duration = 4 })
+      end
+   end
+end)
+
+
+-- ==================== PASTAS E GERENCIAMENTO ====================
+local folderCubes = workspace:FindFirstChild("AuraCubesFolder") or Instance.new("Folder")
+folderCubes.Name = "AuraCubesFolder"
+folderCubes.Parent = workspace
+
+local function updateCubeVisual(cube, index, total)
+   for _, child in ipairs(cube:GetChildren()) do if child:IsA("Fire") or child:IsA("Sparkles") then child:Destroy() end end
+   if config.VisualMode == "RGB" then
+      cube.Material = Enum.Material.Neon cube.Color = Color3.fromHSV(index / total, 1, 1) cube.Transparency = 0
+   elseif config.VisualMode == "Fogo" then
+      cube.Material = Enum.Material.Neon cube.Color = Color3.fromRGB(255, 100, 0) cube.Transparency = 0.05
+      local f = Instance.new("Fire") f.Size = 4 f.Heat = 9 f.Parent = cube
+   elseif config.VisualMode == "Gelo" then
+      cube.Material = Enum.Material.Glass cube.Color = Color3.fromRGB(0, 191, 255) cube.Transparency = 0.3
+      local s = Instance.new("Sparkles") s.Parent = cube
+   elseif config.VisualMode == "Normal" then
+      cube.Material = Enum.Material.SmoothPlastic cube.Color = Color3.fromRGB(160, 160, 160) cube.Transparency = 0
+   end
+end
+
+local function recreateCubes(count)
+   folderCubes:ClearAllChildren()
+   if not config.Enabled then return end
+   for i = 1, count do
+      local part = Instance.new("Part")
+      part.Name = "AuraCubePart"
+      part.Size = Vector3.new(1.5, 1.5, 1.5) 
+      part.Anchored = false 
+      part.CanCollide = false
+      part.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0, 100, 100)
+      local bv = Instance.new("BodyVelocity")
+      bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+      bv.Velocity = Vector3.new(0, 0, 0)
+      bv.Parent = part
+      updateCubeVisual(part, i, count)
+      part.Parent = folderCubes
+   end
+end
+recreateCubes(config.Count)
+
+-- Gerador de Clones para a Aura do Mapa
+local customAuraFolder = nil
+local function rebuildCustomAura()
+   if workspace:FindFirstChild("CustomMapAuraFolder") then
+      workspace.CustomMapAuraFolder:Destroy()
+   end
+   if not config.CustomAuraEnabled or not config.SelectedTargetPart then return end
+
+   customAuraFolder = Instance.new("Folder")
+   customAuraFolder.Name = "CustomMapAuraFolder"
+   customAuraFolder.Parent = workspace
+
+   for i = 1, config.CustomCount do
+      local clone = config.SelectedTargetPart:Clone()
+      clone.Name = "CustomAuraObj_" .. i
+      clone.Anchored = true
+      clone.CanCollide = false
+      clone.Parent = customAuraFolder
+   end
+end
+
+
+-- ==================== CONSTRUÇÃO DA ASA GIGANTE DETALHADA ====================
+local function buildEpicWings()
+   if workspace:FindFirstChild("EpicWingsFolder") then
+      workspace.EpicWingsFolder:Destroy()
+   end
+
+   local folder = Instance.new("Folder")
+   folder.Name = "EpicWingsFolder"
+   folder.Parent = workspace
+
+   local function createSide(isLeft)
+      local sideFolder = Instance.new("Folder")
+      sideFolder.Name = isLeft and "LeftWing" or "RightWing"
+      sideFolder.Parent = folder
+
+      for i = 1, 14 do
+         local part = Instance.new("Part")
+         part.Name = "Feather_" .. i
+         local scaleFactor = 1 + (i * 0.1)
+         part.Size = Vector3.new(0.6, 1.8 * scaleFactor, 0.6)
+         part.Anchored = true
+         part.CanCollide = false
+         part.Material = Enum.Material.Neon
+         part.Parent = sideFolder
+      end
+   end
+
+   createSide(true)
+   createSide(false)
+
+   return folder
+end
+
+local epicWingsFolder = buildEpicWings()
+
+local function updateEpicWingsVisual()
+   if not epicWingsFolder or not epicWingsFolder.Parent then return end
+   for _, side in ipairs(epicWingsFolder:GetChildren()) do
+      for _, cube in ipairs(side:GetChildren()) do
+         if cube:IsA("Part") then
+            for _, child in ipairs(cube:GetChildren()) do
+               if child:IsA("Fire") or child:IsA("Sparkles") then child:Destroy() end
+            end
+
+            if config.WingVisual == "Fogo" then
+               cube.Material = Enum.Material.Neon
+               cube.Color = Color3.fromRGB(230, 20, 20)
+               local f = Instance.new("Fire")
+               f.Size = 4
+               f.Heat = 12
+               f.Color = Color3.fromRGB(255, 60, 0)
+               f.Parent = cube
+            elseif config.WingVisual == "RGB" then
+               cube.Material = Enum.Material.Neon
+               cube.Color = Color3.fromHSV((tick() * 0.2 + cube.Position.Y * 0.1) % 1, 1, 1)
+            elseif config.WingVisual == "Gelo" then
+               cube.Material = Enum.Material.Glass
+               cube.Color = Color3.fromRGB(0, 200, 255)
+               local s = Instance.new("Sparkles")
+               s.Parent = cube
+            else
+               cube.Material = Enum.Material.Neon
+               cube.Color = Color3.fromRGB(180, 20, 40)
+            end
+         end
+      end
+   end
+end
+
+
+-- ==================== CONSTRUÇÃO DAS ESFERAS DO GOJO ====================
+local function buildGojoTechnique()
+   if workspace:FindFirstChild("GojoTechniqueFolder") then
+      workspace.GojoTechniqueFolder:Destroy()
+   end
+
+   local folder = Instance.new("Folder")
+   folder.Name = "GojoTechniqueFolder"
+   folder.Parent = workspace
+
+   local blueSphere = Instance.new("Part")
+   blueSphere.Name = "BlueSphere"
+   blueSphere.Shape = Enum.PartType.Ball
+   blueSphere.Size = Vector3.new(config.SphereSize, config.SphereSize, config.SphereSize)
+   blueSphere.Color = Color3.fromRGB(10, 30, 220)
+   blueSphere.Material = Enum.Material.Neon
+   blueSphere.Anchored = true
+   blueSphere.CanCollide = false
+   blueSphere.Parent = folder
+
+   local blueFire = Instance.new("Fire")
+   blueFire.Size = 10
+   blueFire.Heat = 15
+   blueFire.Color = Color3.fromRGB(0, 120, 255)
+   blueFire.SecondaryColor = Color3.fromRGB(0, 0, 150)
+   blueFire.Parent = blueSphere
+
+   local redSphere = Instance.new("Part")
+   redSphere.Name = "RedSphere"
+   redSphere.Shape = Enum.PartType.Ball
+   redSphere.Size = Vector3.new(config.SphereSize, config.SphereSize, config.SphereSize)
+   redSphere.Color = Color3.fromRGB(180, 10, 20)
+   redSphere.Material = Enum.Material.Neon
+   redSphere.Anchored = true
+   redSphere.CanCollide = false
+   redSphere.Parent = folder
+
+   local redFire = Instance.new("Fire")
+   redFire.Size = 10
+   redFire.Heat = 15
+   redFire.Color = Color3.fromRGB(255, 30, 30)
+   redFire.SecondaryColor = Color3.fromRGB(150, 0, 0)
+   redFire.Parent = redSphere
+
+   local purpleSphere = Instance.new("Part")
+   purpleSphere.Name = "PurpleSphere"
+   purpleSphere.Shape = Enum.PartType.Ball
+   purpleSphere.Size = Vector3.new(config.SphereSize * 1.8, config.SphereSize * 1.8, config.SphereSize * 1.8)
+   purpleSphere.Color = Color3.fromRGB(130, 0, 255)
+   purpleSphere.Material = Enum.Material.Neon
+   purpleSphere.Anchored = true
+   purpleSphere.CanCollide = false
+   purpleSphere.Transparency = 1
+   purpleSphere.Parent = folder
+
+   local purpleFire = Instance.new("Fire")
+   purpleFire.Size = 40
+   purpleFire.Heat = 25
+   purpleFire.Color = Color3.fromRGB(180, 50, 255)
+   purpleFire.SecondaryColor = Color3.fromRGB(75, 0, 130)
+   purpleFire.Parent = purpleSphere
+
+   local purpleSpark = Instance.new("Sparkles")
+   purpleSpark.SparkleColor = Color3.fromRGB(220, 120, 255)
+   purpleSpark.Parent = purpleSphere
+
+   return folder, blueSphere, redSphere, purpleSphere
+end
+
+local gojoFolder, bluePart, redPart, purplePart = buildGojoTechnique()
+
+
+-- ==================== LOOP PRINCIPAL DE ANIMAÇÃO ====================
+local tickTime = 0
+local lastVisualMode = config.VisualMode
+
+RunService.RenderStepped:Connect(function(dt)
+   local character = player.Character
+   if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+   local rootPart = character.HumanoidRootPart
+
+   if bluePart and bluePart.Parent then
+      bluePart.Size = Vector3.new(config.SphereSize, config.SphereSize, config.SphereSize)
+      redPart.Size = Vector3.new(config.SphereSize, config.SphereSize, config.SphereSize)
+      purplePart.Size = Vector3.new(config.SphereSize * 1.8, config.SphereSize * 1.8, config.SphereSize * 1.8)
+   end
+
+   -- Atualização da Aura de Cubos
+   if config.Enabled then
+      tickTime = tickTime + (dt * config.Speed)
+      local currentCubes = folderCubes:GetChildren()
+      if #currentCubes ~= config.Count or lastVisualMode ~= config.VisualMode then
+         lastVisualMode = config.VisualMode
+         recreateCubes(config.Count)
+         currentCubes = folderCubes:GetChildren()
+      end
+      
+      local total = #currentCubes
+      for i, cube in ipairs(currentCubes) do
+         if cube and cube:IsA("Part") then
+            if config.VisualMode == "RGB" then cube.Color = Color3.fromHSV((i / total + tickTime * 0.1) % 1, 1, 1) end
+            local angle = (i / total) * (math.pi * 2) + tickTime
+            
+            local targetPos = Vector3.new(0,0,0)
+            if config.AnimationMode == "Circle" then
+               local x = math.cos(angle) * config.Distance local z = math.sin(angle) * config.Distance
+               targetPos = rootPart.Position + Vector3.new(x, config.Height, z)
+            elseif config.AnimationMode == "Inverted" then
+               local x = math.cos(angle) * config.Distance local z = math.sin(angle) * config.Distance
+               targetPos = rootPart.Position + Vector3.new(x, -config.Height, z)
+            elseif config.AnimationMode == "Random" then
+               local rx = math.sin(tickTime + i) * config.Distance local ry = math.cos(tickTime * 1.3 + i) * config.Distance + config.Height local rz = math.sin(tickTime * 0.7 + i) * config.Distance
+               targetPos = rootPart.Position + Vector3.new(rx, ry, rz)
+            end
+
+            local bv = cube:FindFirstChildOfClass("BodyVelocity")
+            if bv then bv.Velocity = (targetPos - cube.Position) * 25 end
+            cube.CFrame = CFrame.new(targetPos) * CFrame.Angles(tickTime, tickTime, 0)
+
+            if config.FlingEnabled then
+               for _, p in ipairs(Players:GetPlayers()) do
+                  if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                     local pRoot = p.Character.HumanoidRootPart
+                     if (cube.Position - pRoot.Position).Magnitude < 3.5 then
+                        pRoot.Velocity = Vector3.new(math.random(-500, 500), 9999, math.random(-500, 500))
+                        pRoot.RotVelocity = Vector3.new(math.random(-5000, 5000), math.random(-5000, 5000), math.random(-5000, 5000))
+                     end
+                  end
+               end
+            end
+         end
+      end
+   end
+
+   -- Atualização da Aura do Objeto do Mapa
+   if config.CustomAuraEnabled and config.SelectedTargetPart then
+      if not customAuraFolder or not customAuraFolder.Parent or #customAuraFolder:GetChildren() ~= config.CustomCount then
+         rebuildCustomAura()
+      end
+      if customAuraFolder then
+         local customTime = tick() * config.CustomSpeed
+         local objChildren = customAuraFolder:GetChildren()
+         local totalObj = #objChildren
+         for i, obj in ipairs(objChildren) do
+            if obj and obj:IsA("Part") then
+               local angle = (i / totalObj) * (math.pi * 2) + customTime
+               local x = math.cos(angle) * config.CustomDistance
+               local z = math.sin(angle) * config.CustomDistance
+               local targetPos = rootPart.Position + Vector3.new(x, config.CustomHeight, z)
+               obj.CFrame = CFrame.new(targetPos) * CFrame.Angles(customTime, customTime, 0)
+            end
+         end
+      end
+   else
+      if customAuraFolder and customAuraFolder.Parent then customAuraFolder:Destroy() end
+   end
+
+   -- Atualização das Asas Gigantes
+   if config.WingEnabled then
+      if not epicWingsFolder or not epicWingsFolder.Parent then
+         epicWingsFolder = buildEpicWings()
+      end
+      updateEpicWingsVisual()
+
+      local wingTick = tick() * config.WingSpeed
+      local flap = math.sin(wingTick) * 0.45
+      local baseCF = rootPart.CFrame * CFrame.new(0, config.WingHeight, config.WingDepth)
+
+      local leftWing = epicWingsFolder:FindFirstChild("LeftWing")
+      local rightWing = epicWingsFolder:FindFirstChild("RightWing")
+
+      if leftWing then
+         for i, cube in ipairs(leftWing:GetChildren()) do
+            if cube:IsA("Part") then
+               local t = i / 14
+               local offsetX = -0.6 - (t * 2.8)
+               local offsetY = math.sin(t * math.pi * 0.8) * 2.2 + (t * 0.8)
+               local offsetZ = math.cos(t * math.pi * 0.5) * 0.5
+               local rot = CFrame.Angles(0.2, 0.5, -0.6 - (t * 0.4) - flap)
+               cube.CFrame = baseCF * CFrame.new(offsetX, offsetY, offsetZ) * rot
+            end
+         end
+      end
+
+      if rightWing then
+         for i, cube in ipairs(rightWing:GetChildren()) do
+            if cube:IsA("Part") then
+               local t = i / 14
+               local offsetX = 0.6 + (t * 2.8)
+               local offsetY = math.sin(t * math.pi * 0.8) * 2.2 + (t * 0.8)
+               local offsetZ = math.cos(t * math.pi * 0.5) * 0.5
+               local rot = CFrame.Angles(0.2, -0.5, 0.6 + (t * 0.4) + flap)
+               cube.CFrame = baseCF * CFrame.new(offsetX, offsetY, offsetZ) * rot
+            end
+         end
+      end
+   else
+      if epicWingsFolder and epicWingsFolder.Parent then epicWingsFolder:Destroy() end
+   end
+
+   -- Atualização das Técnicas do Gojo
+   if config.GojoEnabled then
+      if not gojoFolder or not gojoFolder.Parent then
+         gojoFolder, bluePart, redPart, purplePart = buildGojoTechnique()
+      end
+
+      local timeCycle = (tick() * config.OrbitSpeed) % 8
+
+      if timeCycle < 4.5 then
+         purplePart.Transparency = 1
+         bluePart.Transparency = 0
+         redPart.Transparency = 0
+
+         local angleBlue = timeCycle * 2.5
+         local angleRed = angleBlue + math.pi
+
+         local bx = math.cos(angleBlue) * config.OrbitDistance
+         local bz = math.sin(angleBlue) * config.OrbitDistance
+         bluePart.CFrame = CFrame.new(rootPart.Position + Vector3.new(bx, 3, bz))
+
+         local rx = math.cos(angleRed) * config.OrbitDistance
+         local rz = math.sin(angleRed) * config.OrbitDistance
+         redPart.CFrame = CFrame.new(rootPart.Position + Vector3.new(rx, 3, rz))
+
+      elseif timeCycle >= 4.5 and timeCycle < 7.2 then
+         bluePart.Transparency = 1
+         redPart.Transparency = 1
+         purplePart.Transparency = 0
+
+         local progress = (timeCycle - 4.5) / 2.7 
+         local currentHeight = progress * config.MaxHeight
+
+         purplePart.CFrame = CFrame.new(rootPart.Position + Vector3.new(0, currentHeight, 0))
+
+         local shakeIntensity = 0.9
+         Camera.CFrame = Camera.CFrame * CFrame.new(
+            math.random(-100, 100) * 0.01 * shakeIntensity,
+            math.random(-100, 100) * 0.01 * shakeIntensity,
+            math.random(-100, 100) * 0.01 * shakeIntensity
+         )
+      else
+         purplePart.Transparency = 1
+      end
+   else
+      if gojoFolder and gojoFolder.Parent then gojoFolder:Destroy() end
+   end
+end)
+
+Rayfield:Notify({ Title = "Hub Atualizado com Aura do Mapa!", Content = "Vá na aba 'Aura do Mapa' para selecionar objetos clicando neles!", Duration = 4 })

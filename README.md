@@ -1,2 +1,0 @@
-# menumuulkanime
-anime menu
